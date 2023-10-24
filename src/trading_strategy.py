@@ -16,11 +16,19 @@ class TradingStrategy(object):
         self.delta = delta
         self.functionals = None  # functionals l_m for m = 1, ..., d
 
+    def f(self, m:int) -> int:
+        """
+        Shift operator f as defined in the paper.
+        Note that we represent "letters" as integers to allow for direct indexing.
+        """
+        return self.Z_dimension + m # or self.Z_dimension + m + 1 ?
+
     def compute_mu_sig(self, E_ZZ_LL: np.ndarray) -> np.ndarray:
         """
         This method computes the mu_sig vector as defined in the paper.
         """
-        pass
+        mu_sig = np.zeros((self.d,self.Z_dimension))
+        for multi_index in np.
 
     def compute_sigma_sig(self, E_ZZ_LL: np.ndarray) -> np.ndarray:
         """
@@ -62,6 +70,11 @@ class TradingStrategy(object):
         N = f.shape[
             2
         ]  # number of non-tradable factors (i.e. dimension of the factor paths)
+
+        # for later use
+        self.d = d
+        self.N = N
+        self.Z_dimension = d + N + 1
 
         # 1. aggregate price and factor paths into market factor process Z_t = (t, X_t, f_t)
         Z = np.zeros((M, T, d + N + 1))
