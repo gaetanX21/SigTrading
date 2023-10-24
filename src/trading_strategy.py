@@ -2,6 +2,7 @@ import utils
 import numpy as np
 import torch
 import signatory
+import itertools
 
 
 class TradingStrategy(object):
@@ -16,7 +17,17 @@ class TradingStrategy(object):
         """
         self.depth = depth
         self.delta = delta
-        self.functionals = None  # functionals l_m for m = 1, ..., d
+        self.functionals = None  # functionals l_m for m = 1, ..., d        
+
+    def init_bijection(self, channels:int):
+        # we need a bijection between words and integers for indexing purposes
+        # we need to go up to 2*(depth+1) because of the shift operator f and the LL transform
+        words = []
+        for i in range(0, 2*(self.depth+1)):
+            words += list(itertools.product(range(channels), repeat=i))
+        self.i_to_word = words
+        self.word_to_i = {word: i for i, word in enumerate(words)}
+        print(self.word_to_i)
 
     def f(self, m:int) -> int:
         """
@@ -30,7 +41,7 @@ class TradingStrategy(object):
         This method computes the mu_sig vector as defined in the paper.
         E_ZZ_LL needs to be computed to truncated level >=self.depth+1. (see (*))
         """
-        mu_i_length = signatory.signature_channels(self.Z_dimension, self.depth)
+        mu_i_length = signatory.signature_channels(self.Z_dimension, self.depth) # mu_i_length = 1 + dim + dim^2 + ... + dim^depth
         mu_sig = torch.zeros((self.d,mu_i_length)) # mu_sig = [mu_1_sig, ..., mu_d_sig]
         for m in range(self.d):
             shift = self.f(m)
@@ -38,19 +49,26 @@ class TradingStrategy(object):
             words = signatory.all_words(self.Z_dimension, self.depth)
             # compute mu_i_sig
             mu_i_sig = torch.zeros(mu_i_length)
-            for k in range(self.depth):
-                print(f'looking at words of length {k}')
-                # get all words of length k
-                words_k = utils.get_level_k_words(k, self.Z_dimension)
-                print(f'words_k: {words_k}')
-                # get (k+1)-th term of the signature since we have words of length k+1 (because of the shift operator)
-                level_k_signature = signatory.extract_signature_term(E_ZZ_LL, 2*self.Z_dimension, k+1) # (*)
-                print(f'level_k_signature.shape={level_k_signature.shape}')
-                # compute mu_i_sig for each word of length k
-                for word in words_k:
-                    print(f'setting mu_i_sig[{word}] to level_k_signature[{word+shift}]')
-                    mu_i_sig[word] = level_k_signature[word+shift]
+            print(f'E_ZZ_LL.shape={E_ZZ_LL.shape}')
+            for word_index, word in enumerate(words):
+                word_shifted = word + (shift,)
+                print(f'setting mu_i_sig[{word_index}] = E_ZZ_LL[{word_shifted}]')
+                mu_i_sig[word_index] = E_ZZ_LL[self.word_to_i[word_shifted]]
             mu_sig[m] = mu_i_sig
+
+            # for k in range(self.depth):
+            #     print(f'looking at words of length {k}')
+            #     # get all words of length k
+            #     words_k = utils.get_level_k_words(k, self.Z_dimension)
+            #     print(f'words_k: {words_k}')
+            #     # get (k+1)-th term of the signature since we have words of length k+1 (because of the shift operator)
+            #     level_k_signature = signatory.extract_signature_term(E_ZZ_LL, 2*self.Z_dimension, k+1) # (*)
+            #     print(f'level_k_signature.shape={level_k_signature.shape}')
+            #     # compute mu_i_sig for each word of length k
+            #     for word in words_k:
+            #         print(f'setting mu_i_sig[{word}] to level_k_signature[{word+shift}]')
+            #         mu_i_sig[word] = level_k_signature[word+shift]
+            # mu_sig[m] = mu_i_sig
         return mu_sig
 
 
@@ -100,6 +118,8 @@ class TradingStrategy(object):
         self.N = N
         self.Z_dimension = d + N + 1
 
+        self.init_bijection(self.Z_dimension) # set the bijection between words and integers (for indexing purposes)
+
         # 1. aggregate price and factor paths into market factor process Z_t = (t, X_t, f_t)
         Z = torch.zeros((M, T, self.Z_dimension))
         # time component t
@@ -120,8 +140,6 @@ class TradingStrategy(object):
         
         # 5. compute the mu_sig vector as defined in the paper
         mu_sig = self.compute_mu_sig(E_ZZ_LL)
-        print(mu_sig.shape)
-        print(mu_sig)
 
         # 6. compute the simga_sig matrix as defined in the paper
         sigma_sig = self.compute_sigma_sig(E_ZZ_LL)
