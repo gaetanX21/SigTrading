@@ -4,7 +4,6 @@ import signatory
 import itertools
 
 
-
 def get_level_k_words(k: int, channels:int) -> np.ndarray:
     """
     This method returns all possible words of length k with letters in {0,...,channels-1}.
@@ -12,7 +11,7 @@ def get_level_k_words(k: int, channels:int) -> np.ndarray:
     return np.array(list(itertools.product(range(channels), repeat=k)))
 
 
-def lead_lag_transform(batch_path: torch.Tensor) -> torch.Tensor:
+def compute_lead_lag_transform(batch_path: torch.Tensor) -> torch.Tensor:
     """"
     """
     batch_path_doubled = batch_path.repeat_interleave(2, dim=1) # each path is doubled (with neighbors equal)
@@ -26,5 +25,5 @@ def lead_lag_transform(batch_path: torch.Tensor) -> torch.Tensor:
 def compute_signature(batch_path: torch.Tensor, depth: int) -> torch.Tensor:
     """
     """
-    signature = signatory.signature(batch_path, depth)
+    signature = signatory.signature(batch_path, depth, scalar_term=True)
     return signature

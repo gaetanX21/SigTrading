@@ -34,16 +34,21 @@ class TradingStrategy(object):
         mu_sig = torch.zeros((self.d,mu_i_length)) # mu_sig = [mu_1_sig, ..., mu_d_sig]
         for m in range(self.d):
             shift = self.f(m)
+            print(f'using shift f({m})={shift}')
             words = signatory.all_words(self.Z_dimension, self.depth)
             # compute mu_i_sig
             mu_i_sig = torch.zeros(mu_i_length)
             for k in range(self.depth):
+                print(f'looking at words of length {k}')
                 # get all words of length k
                 words_k = utils.get_level_k_words(k, self.Z_dimension)
+                print(f'words_k: {words_k}')
                 # get (k+1)-th term of the signature since we have words of length k+1 (because of the shift operator)
                 level_k_signature = signatory.extract_signature_term(E_ZZ_LL, 2*self.Z_dimension, k+1) # (*)
+                print(f'level_k_signature.shape={level_k_signature.shape}')
                 # compute mu_i_sig for each word of length k
                 for word in words_k:
+                    print(f'setting mu_i_sig[{word}] to level_k_signature[{word+shift}]')
                     mu_i_sig[word] = level_k_signature[word+shift]
             mu_sig[m] = mu_i_sig
         return mu_sig
@@ -106,15 +111,17 @@ class TradingStrategy(object):
 
         # 2. compute the lead-lag transform Z^LL_t of each market factor process Z_t
         Z_LL = utils.compute_lead_lag_transform(Z)
-
+        
         # 3. compute the N-truncated signature ZZ^^LL_t of each lead-lag transform Z^LL_t
-        ZZ_LL = utils.compute_signature(Z_LL, self.N)
-
+        ZZ_LL = utils.compute_signature(Z_LL, self.depth)
+        
         # 4. compute the expected N-truncated signature E[ZZ^^LL_t] using the empirical mean
         E_ZZ_LL = torch.mean(ZZ_LL, axis=0)
-
+        
         # 5. compute the mu_sig vector as defined in the paper
         mu_sig = self.compute_mu_sig(E_ZZ_LL)
+        print(mu_sig.shape)
+        print(mu_sig)
 
         # 6. compute the simga_sig matrix as defined in the paper
         sigma_sig = self.compute_sigma_sig(E_ZZ_LL)
