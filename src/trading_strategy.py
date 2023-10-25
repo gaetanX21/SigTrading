@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import signatory
 import itertools
+from time import time
 
 
 class TradingStrategy(object):
@@ -22,12 +23,14 @@ class TradingStrategy(object):
     def init_bijection(self, channels:int):
         # we need a bijection between words and integers for indexing purposes
         # we need to go up to 2*(depth+1) because of the shift operator f and the LL transform
+        start = time()
         words = []
         for i in range(0, 2*(self.depth+1)):
-            words += list(itertools.product(range(channels), repeat=i))
+            words += list(itertools.product(range(2*channels), repeat=i))
         self.i_to_word = words
         self.word_to_i = {word: i for i, word in enumerate(words)}
-        print(self.word_to_i)
+        end = time()
+        print(f'bijection init took {end-start} seconds')
 
     def f(self, m:int) -> int:
         """
@@ -41,34 +44,22 @@ class TradingStrategy(object):
         This method computes the mu_sig vector as defined in the paper.
         E_ZZ_LL needs to be computed to truncated level >=self.depth+1. (see (*))
         """
-        mu_i_length = signatory.signature_channels(self.Z_dimension, self.depth) # mu_i_length = 1 + dim + dim^2 + ... + dim^depth
+        mu_i_length = signatory.signature_channels(self.Z_dimension, self.depth) # mu_i_length = 1 + Z + Z^2 + ... + Z^depth
         mu_sig = torch.zeros((self.d,mu_i_length)) # mu_sig = [mu_1_sig, ..., mu_d_sig]
         for m in range(self.d):
             shift = self.f(m)
             print(f'using shift f({m})={shift}')
-            words = signatory.all_words(self.Z_dimension, self.depth)
+            words = signatory.all_words(2*self.Z_dimension, self.depth)
+            # add empty word
+            words = [()] + words
             # compute mu_i_sig
             mu_i_sig = torch.zeros(mu_i_length)
             print(f'E_ZZ_LL.shape={E_ZZ_LL.shape}')
             for word_index, word in enumerate(words):
                 word_shifted = word + (shift,)
-                print(f'setting mu_i_sig[{word_index}] = E_ZZ_LL[{word_shifted}]')
+                print(f'setting mu_i_sig[{word}] = E_ZZ_LL[{word_shifted}]')
                 mu_i_sig[word_index] = E_ZZ_LL[self.word_to_i[word_shifted]]
             mu_sig[m] = mu_i_sig
-
-            # for k in range(self.depth):
-            #     print(f'looking at words of length {k}')
-            #     # get all words of length k
-            #     words_k = utils.get_level_k_words(k, self.Z_dimension)
-            #     print(f'words_k: {words_k}')
-            #     # get (k+1)-th term of the signature since we have words of length k+1 (because of the shift operator)
-            #     level_k_signature = signatory.extract_signature_term(E_ZZ_LL, 2*self.Z_dimension, k+1) # (*)
-            #     print(f'level_k_signature.shape={level_k_signature.shape}')
-            #     # compute mu_i_sig for each word of length k
-            #     for word in words_k:
-            #         print(f'setting mu_i_sig[{word}] to level_k_signature[{word+shift}]')
-            #         mu_i_sig[word] = level_k_signature[word+shift]
-            # mu_sig[m] = mu_i_sig
         return mu_sig
 
 
@@ -120,26 +111,31 @@ class TradingStrategy(object):
 
         self.init_bijection(self.Z_dimension) # set the bijection between words and integers (for indexing purposes)
 
-        # 1. aggregate price and factor paths into market factor process Z_t = (t, X_t, f_t)
+        # 1. aggregate price and factor paths into market factor process Z_t = (t, X_t, f_t) (no time component)
         Z = torch.zeros((M, T, self.Z_dimension))
-        # time component t
+        # # time component t
         Z[:, :, 0] = torch.arange(T)  # time is defined with t_i = i
         # price component X_t
-        Z[:, :, 1 : d + 1] = X
+        Z[:,:,1:d+1] = X
         # factor component f_t
-        Z[:, :, d + 1 :] = f
+        Z[:,:,d+1:] = f
+        # Z has shape (M, T, Z) where Z = 1 + d + N
 
         # 2. compute the lead-lag transform Z^LL_t of each market factor process Z_t
         Z_LL = utils.compute_lead_lag_transform(Z)
+        # Z_LL has shape (M, T, 2*Z)
         
         # 3. compute the N-truncated signature ZZ^^LL_t of each lead-lag transform Z^LL_t
-        ZZ_LL = utils.compute_signature(Z_LL, self.depth)
+        ZZ_LL = utils.compute_signature(Z_LL, self.depth+1) # we'll need 2*(depth+1) to compute sigma later on
+        # ZZ_LL has shape (M, T, K) with K = 1 + (2*Z) + (2*Z)^2 + ... + (2*Z)^(depth+1)
         
         # 4. compute the expected N-truncated signature E[ZZ^^LL_t] using the empirical mean
         E_ZZ_LL = torch.mean(ZZ_LL, axis=0)
+        # E_ZZ_LL has shape (T, K)
         
         # 5. compute the mu_sig vector as defined in the paper
         mu_sig = self.compute_mu_sig(E_ZZ_LL)
+        # mu_sig has shape (d, mu_i_length) with mu_i_length = 1 + Z + Z^2 + ... + Z^depth
 
         # 6. compute the simga_sig matrix as defined in the paper
         sigma_sig = self.compute_sigma_sig(E_ZZ_LL)
