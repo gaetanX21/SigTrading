@@ -4,6 +4,18 @@ import signatory
 import itertools
 
 
+def word_to_i(word, d):
+    """
+    Given a word written in the alphabet {0, 1, ..., d-1}, return its index in the lexicographic order (basically).
+    """
+    k = len(word) # we're accessing the k-th signature term
+    s = sum(d**i for i in range(k)) # 1 + d + d^2 + ... + d^(k-1)
+    c = 0
+    for i, w in enumerate(word):
+        c += int(w) * d**(k-1-i)
+    return s + c
+
+
 def get_level_k_words(k: int, channels:int) -> np.ndarray:
     """
     This method returns all possible words of length k with letters in {0,...,channels-1}.
@@ -21,6 +33,7 @@ def compute_lead_lag_transform(batch_path: torch.Tensor) -> torch.Tensor:
     # concatenate lead and lag paths
     batch_path_LL = torch.cat((batch_lead, batch_lag), dim=2)
     return batch_path_LL
+
 
 def compute_signature(batch_path: torch.Tensor, depth: int) -> torch.Tensor:
     """

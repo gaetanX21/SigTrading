@@ -55,9 +55,9 @@ class TradingStrategy(object):
             # compute mu_i_sig
             mu_i_sig = torch.zeros(mu_i_length)
             print(f'E_ZZ_LL.shape={E_ZZ_LL.shape}')
+            print(E_ZZ_LL)
             for word_index, word in enumerate(words):
                 word_shifted = word + (shift,)
-                print(f'setting mu_i_sig[{word}] = E_ZZ_LL[{word_shifted}]')
                 mu_i_sig[word_index] = E_ZZ_LL[self.word_to_i[word_shifted]]
             mu_sig[m] = mu_i_sig
         return mu_sig
