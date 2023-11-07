@@ -37,7 +37,7 @@ class TradingStrategy(object):
         Shift operator f as defined in the paper.
         Note that we represent "letters" as integers to allow for direct indexing.
         """
-        return str(self.Z_dimension + m) # or self.Z_dimension + m + 1 ?
+        return self.Z_dimension + m # or self.Z_dimension + m + 1 ?
 
     def compute_mu_sig(self, E_ZZ_LL: torch.Tensor) -> torch.Tensor:
         """
@@ -49,16 +49,16 @@ class TradingStrategy(object):
         for m in range(self.d):
             shift = self.f(m)
             # print(f'using shift f({m})={shift}')
-            words = utils.get_length_leq_k_words(self.depth, 2*self.Z_dimension) # list of all words of length <= depth
-            # # add empty word
-            # words = [()] + words
+            words = signatory.all_words(2*self.Z_dimension, self.depth)
+            # add empty word
+            words = [()] + words
             # compute mu_i_sig
             mu_i_sig = torch.zeros(mu_i_length)
             # print(f'E_ZZ_LL.shape={E_ZZ_LL.shape}')
             #print length word ( dic): 
             
             for word_index, word in enumerate(words):
-                word_shifted = word + shift # word_shifted is a str
+                word_shifted = word + (shift,)
                 # print(f'setting mu_i_sig[{word}] = E_ZZ_LL[{word_shifted}]')
                 mu_i_sig[word_index] = E_ZZ_LL[utils.word_to_i(word_shifted,2*self.Z_dimension)]
             mu_sig[m] = mu_i_sig
@@ -76,22 +76,20 @@ class TradingStrategy(object):
         sigma_sig = torch.zeros((sigma_sig_length,sigma_sig_length)) # sigma_sig = [sigma_1_sig, ..., sigma_d_sig] square matrix
         for m in range(self.d):
             shift_m = self.f(m)
-            words_m = utils.get_length_leq_k_words(self.depth, 2*self.Z_dimension) # list of all w
+            words_m = signatory.all_words(2*self.Z_dimension, self.depth) # list of all w
             for w in words_m:
                 for n in range(self.d):
                     shift_n = self.f(n)
-                    words_n = utils.get_length_leq_k_words(self.depth, 2*self.Z_dimension) # list of all v
+                    words_n = signatory.all_words(2*self.Z_dimension, self.depth) # list of all v
                     for v in words_n:
                         # calcul de sigma_sig_{wf(m),vf(n)}
 
                         # calcul du terme de gauche
                         left_term = 0
-                        wfm = w + shift_m # wfm is a str
-                        vfn = v + shift_n # vfn is a str
+                        wfm = w + (shift_m,)
+                        vfn = v + (shift_n,)
                         print(f"w={w}, v={v}, wfm={wfm}, vfn={vfn}")
-                        words = utils.shuffle_product(wfm, vfn)
-                        # cela génère des mots de longueur <= 2*depth, donc on doit les tronquer!?
-                        # il y a aussi des doublons potentiels ? si oui, à enlever ?
+                        words = utils.shuffle_product(str(wfm), str(vfn))
                         print(f'words={words}')
                         for word in words:
                             left_term += E_ZZ_LL[utils.word_to_i(word,2*self.Z_dimension)]
