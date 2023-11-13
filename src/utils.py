@@ -78,10 +78,20 @@ def compute_lead_lag_transform(batch_path: torch.Tensor) -> torch.Tensor:
 
 
 @timeit
-def compute_signature(batch_path: torch.Tensor, depth: int) -> torch.Tensor:
+def compute_signature(
+    batch_path: torch.Tensor, depth: int, no_batch: bool = False
+) -> torch.Tensor:
     """ """
-    signature = signatory.signature(batch_path, depth, scalar_term=True)
-    return signature
+    print("Computing signature...")
+    print(f"batch_path.shape = {batch_path.shape}")
+    if no_batch:
+        sig = signatory.signature(
+            batch_path.unsqueeze(0), depth, scalar_term=True
+        ).squeeze(0)
+    else:
+        sig = signatory.signature(batch_path, depth, scalar_term=True)
+
+    return sig
 
 
 def shuffle_product(word1, word2):

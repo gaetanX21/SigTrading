@@ -232,7 +232,9 @@ class TradingStrategy(object):
             for n in range(self.d):
                 for w in words:
                     wfm = w + self.f(m)
-                    index_wfm = m * words_len + utils.word_to_i(w, self.Z_dimension)
+                    index_wfm = m * words_len + utils.word_to_i(
+                        w, self.Z_dimension
+                    )  # wrong!?
                     for v in words:
                         vfn = v + self.f(n)
                         index_vfn = n * words_len + utils.word_to_i(v, self.Z_dimension)
@@ -241,9 +243,7 @@ class TradingStrategy(object):
                         wfm_term = inv_sigma_sig_times_vector[index_wfm]
                         vfn_term = inv_sigma_sig_times_vector[index_vfn]
                         sigma_sig_term = self.sigma_sig[(index_wfm, index_vfn)]
-                        # print(
-                        #     f"wfm_term={wfm_term}, vfn_term={vfn_term}, sigma_sig_term={sigma_sig_term}"
-                        # )
+
                         # their product is the sum increment
                         s_incr = wfm_term * vfn_term * sigma_sig_term
 
@@ -251,16 +251,19 @@ class TradingStrategy(object):
 
         # print lambda successufully computed in green
         print("\033[92m" + "Lambda successfully computed" + "\033[0m")
-        print(f"computing self.lambda_ = 2* sqrt({s}/{self.delta})")
-        self.lambda_ = 2 * np.sqrt(s / self.delta)
+        print(f"computing self.lambda_ = 0.5 * sqrt({s}/deltsa)")
+        self.lambda_ = 0.5 * np.sqrt(s / self.delta)
 
-    def trade(self, X: torch.Tensor, f: torch.Tensor) -> torch.Tensor:
+    def trade(
+        self, X: torch.Tensor, f: torch.Tensor, min_steps: int = 5
+    ) -> torch.Tensor:
         """
         This method implements the trading strategy given new unseen data, after the model has been fitted.
 
         Arguments:
         - X (np.ndarray) : tradable asset's price paths
         - f (np.ndarray) : non-tradable factor's paths
+        - min_steps (int) : minimum number of time steps to consider before trading
 
         Returns:
         - np.ndarray : trading strategy's paths
@@ -279,9 +282,9 @@ class TradingStrategy(object):
         ]  # number of non-tradable factors (i.e. dimension of the factor paths)
 
         # aggregate price and factor paths into market factor process Z_t = (t, X_t, f_t)
-        Z = np.zeros((T, d + N + 1))
+        Z = torch.zeros((T, d + N + 1))
         # time component t
-        Z[:, 0] = np.arange(T)
+        Z[:, 0] = torch.arange(T)  # time is defined with t_i = i
         # price component X_t
         Z[:, 1 : d + 1] = X
         # factor component f_t
@@ -291,13 +294,16 @@ class TradingStrategy(object):
         len_signatures = utils.get_number_of_words_leq_k(
             self.depth, self.Z_dimension
         )  # we have t signatures and each have this length
-        ZZ = torch.zeros((T, len_signatures))
+
         xi = torch.zeros(
             (T, self.d)
         )  # xi has shape (T, d) i.e. one row per time step, one column per tradable asset (so T rows and d columns)
-        for t in range(T):
+
+        for t in range(T - 5):
+            Z_t = Z[: t + min_steps, :]
+            ZZ_t = utils.compute_signature(Z_t, self.depth, no_batch=True)
             for m in range(self.d):
-                xi[t, m] = torch.dot(self.functionals[m], ZZ[t, :])
+                xi[t, m] = torch.dot(self.functionals[m], ZZ_t)
 
         return xi
 
@@ -312,9 +318,7 @@ class TradingStrategy(object):
         Returns:
         - float : trading strategy's PnL
         """
-        assert (
-            X.shape[0] == xi.shape[0] + 1
-        ), "xi must have exactly one less time step than X"
+        assert X.shape[0] == xi.shape[0], "xi and X must have the same number of steps"
         assert X.shape[1] == xi.shape[1], "X and xi must have same dimension"
 
         # retrieve dimensions
@@ -324,7 +328,7 @@ class TradingStrategy(object):
         pnl = 0
         for m in range(d):
             # compute the PnL for asset m as the sum of xi_t^m * (X_(t+1)^m-X_t^m)
-            pnl_m = np.sum(xi[:, m] * (X[1:, m] - X[:-1, m]))
+            pnl_m = np.sum(xi[:-1, m] * (X[1:, m] - X[:-1, m]))
             pnl += pnl_m
 
         return pnl
