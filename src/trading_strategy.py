@@ -215,8 +215,8 @@ class TradingStrategy(object):
         # 7. now we can finally compute the functionals l_m for m = 1, ..., d
         self.compute_functionals()
 
-        # print 'Fitting successful' in green
-        print("\033[92m" + "Fitting successful" + "\033[0m")
+        # print 'Fitting successful' in green and in bold
+        print("\033[1m" + "\033[92m" + "Fitting successful.\n" + "\033[0m" + "\033[0m")
 
     @timeit
     def compute_lambda(self) -> float:
@@ -250,8 +250,8 @@ class TradingStrategy(object):
                         s += s_incr
 
         # print lambda successufully computed in green
-        print("\033[92m" + "Lambda successfully computed" + "\033[0m")
-        print(f"computing self.lambda_ = 0.5 * sqrt({s}/deltsa)")
+        print("\033[92m" + "lambda successfully computed" + "\033[0m")
+        # print(f"computing self.lambda_ = 0.5 * sqrt({s}/deltsa)")
         self.lambda_ = 0.5 * np.sqrt(s / self.delta)
 
     def trade(
@@ -299,15 +299,15 @@ class TradingStrategy(object):
             (T, self.d)
         )  # xi has shape (T, d) i.e. one row per time step, one column per tradable asset (so T rows and d columns)
 
-        for t in range(T - 5):
-            Z_t = Z[: t + min_steps, :]
+        for t in range(min_steps, T):
+            Z_t = Z[: t + 1, :]  # we only look at information up to know
             ZZ_t = utils.compute_signature(Z_t, self.depth, no_batch=True)
             for m in range(self.d):
                 xi[t, m] = torch.dot(self.functionals[m], ZZ_t)
 
         return xi
 
-    def compute_pnl(self, X: torch.Tensor, xi: torch.Tensor) -> float:
+    def compute_pnl(self, X: torch.Tensor, xi: torch.Tensor) -> torch.tensor:
         """
         This method computes the PnL of the trading strategy when prices follow path X and the trading strategy is given by xi.
 
@@ -325,10 +325,8 @@ class TradingStrategy(object):
         T = X.shape[0]
         d = X.shape[1]
 
-        pnl = 0
-        for m in range(d):
-            # compute the PnL for asset m as the sum of xi_t^m * (X_(t+1)^m-X_t^m)
-            pnl_m = np.sum(xi[:-1, m] * (X[1:, m] - X[:-1, m]))
-            pnl += pnl_m
+        daily_pnl = xi[:-1, :] * (
+            X[1:, :] - X[:-1, :]
+        )  # daily_pnl has shape (T-1, d) and it's the pnl for each asset for each "trading day" (ie. each time step)
 
-        return pnl
+        return daily_pnl

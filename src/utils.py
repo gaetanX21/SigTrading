@@ -3,6 +3,10 @@ import torch
 import signatory
 import itertools
 import time
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_theme()
 
 
 def timeit(func):
@@ -11,7 +15,12 @@ def timeit(func):
         output = func(*args, **kwargs)
         stop = time.time()
         duration = stop - start
-        print("\033[94m" + f"function {func.__name__} took {duration:.2f}s" + "\033[0m")
+        if duration > 1:
+            print(
+                "\033[91m"
+                + f"function {func.__name__} took {duration:.2f}s"
+                + "\033[0m"
+            )
         return output
 
     return timed
@@ -82,8 +91,6 @@ def compute_signature(
     batch_path: torch.Tensor, depth: int, no_batch: bool = False
 ) -> torch.Tensor:
     """ """
-    print("Computing signature...")
-    print(f"batch_path.shape = {batch_path.shape}")
     if no_batch:
         sig = signatory.signature(
             batch_path.unsqueeze(0), depth, scalar_term=True
@@ -122,3 +129,21 @@ def shuffle_product(word1, word2):
         right_term = [word + b for word in shuffle_right]
 
         return left_term + right_term  # union of the two
+
+
+def plot_cum_pnl(cum_pnl: torch.tensor) -> None:
+    plt.figure(figsize=(10, 5))
+    n_assets = cum_pnl.shape[1]
+    T = cum_pnl.shape[0]  # number of time steps
+    for i in range(n_assets):
+        plt.plot(
+            np.arange(T),
+            cum_pnl[:, i],
+            label=f"cumulative PnL from trading on asset {i}",
+        )
+    cum_pnl_all = torch.sum(cum_pnl, axis=1)
+    plt.plot(np.arange(T), cum_pnl_all, label="cumulative PnL from trading all assets")
+    plt.legend()
+    plt.xlabel("time")
+    plt.ylabel("cumulative PnL")
+    plt.show()
