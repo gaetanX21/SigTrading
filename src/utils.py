@@ -147,3 +147,18 @@ def plot_cum_pnl(cum_pnl: torch.tensor) -> None:
     plt.xlabel("time")
     plt.ylabel("cumulative PnL")
     plt.show()
+
+
+def print_signature(flat: torch.tensor, channels: int, depth: int) -> None:
+    """Receives a {depth}-truncated signature of a signal with {channels} dimension and prints it in a nice way."""
+    N = flat.shape[0]
+    s = 0
+    for k in range(depth + 1):
+        s += channels**k
+    assert N == s, "The signature is not of the expected length."
+
+    for k in range(depth + 1):
+        print(f"Level {k}:")
+        index_0 = get_number_of_words_leq_k(k - 1, channels)
+        level_k = flat[index_0 : index_0 + get_number_of_words_k(k, channels)]
+        print(level_k)

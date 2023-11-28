@@ -290,11 +290,6 @@ class TradingStrategy(object):
         # factor component f_t
         Z[:, d + 1 :] = f
 
-        # for t in range(T), compute the signature of each market factor process Z_{0 to t}
-        len_signatures = utils.get_number_of_words_leq_k(
-            self.depth, self.Z_dimension
-        )  # we have t signatures and each have this length
-
         xi = torch.zeros(
             (T, self.d)
         )  # xi has shape (T, d) i.e. one row per time step, one column per tradable asset (so T rows and d columns)
@@ -302,6 +297,8 @@ class TradingStrategy(object):
         for t in range(min_steps, T):
             Z_t = Z[: t + 1, :]  # we only look at information up to know
             ZZ_t = utils.compute_signature(Z_t, self.depth, no_batch=True)
+            # print(f"signature of Z_t has shape {ZZ_t.shape}")
+            # print(ZZ_t)
             for m in range(self.d):
                 xi[t, m] = torch.dot(self.functionals[m], ZZ_t)
 
