@@ -31,7 +31,7 @@ class TradingStrategy(object):
         Shift operator f as defined in the paper.
         Note that we represent "letters" as integers to allow for direct indexing.
         """
-        return str(self.Z_dimension + m)  # or self.Z_dimension + m + 1 ?
+        return str(self.Z_dimension + m + 1)  # or self.Z_dimension + m (old version) ?
 
     @timeit
     def compute_mu_sig(self, E_ZZ_LL: torch.Tensor) -> torch.Tensor:
@@ -180,8 +180,12 @@ class TradingStrategy(object):
 
         # 1. aggregate price and factor paths into market factor process Z_t = (t, X_t, f_t) (no time component)
         Z = torch.zeros((M, T, self.Z_dimension))
-        # # time component t
-        Z[:, :, 0] = torch.arange(T)  # time is defined with t_i = i
+
+        # time component t
+        # Z[:, :, 0] = torch.arange(T)  # time is defined with t_i = i
+        # NEW : let's use normalized time instead (so that t has less importance)
+        Z[:, :, 0] = torch.arange(T) / T
+
         # price component X_t
         Z[:, :, 1 : d + 1] = X
         # factor component f_t
@@ -284,7 +288,10 @@ class TradingStrategy(object):
         # aggregate price and factor paths into market factor process Z_t = (t, X_t, f_t)
         Z = torch.zeros((T, d + N + 1))
         # time component t
-        Z[:, 0] = torch.arange(T)  # time is defined with t_i = i
+        # Z[:, 0] = torch.arange(T)  # time is defined with t_i = i
+        # NEW : let's use normalized time instead (so that t has less importance)
+        Z[:, 0] = torch.arange(T) / T
+
         # price component X_t
         Z[:, 1 : d + 1] = X
         # factor component f_t
@@ -295,7 +302,7 @@ class TradingStrategy(object):
         )  # xi has shape (T, d) i.e. one row per time step, one column per tradable asset (so T rows and d columns)
 
         for t in range(min_steps, T):
-            Z_t = Z[: t + 1, :]  # we only look at information up to know
+            Z_t = Z[:t, :]  # we only look at information up to now
             ZZ_t = utils.compute_signature(Z_t, self.depth, no_batch=True)
             # print(f"signature of Z_t has shape {ZZ_t.shape}")
             # print(ZZ_t)
