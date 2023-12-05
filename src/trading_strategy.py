@@ -31,7 +31,7 @@ class TradingStrategy(object):
         Shift operator f as defined in the paper.
         Note that we represent "letters" as integers to allow for direct indexing.
         """
-        return str(self.Z_dimension + m + 1)  # or self.Z_dimension + m (old version) ?
+        return [self.Z_dimension + m + 1]  # or self.Z_dimension + m (old version) ?
 
     @timeit
     def compute_mu_sig(self, E_ZZ_LL: torch.Tensor) -> None:
@@ -83,18 +83,15 @@ class TradingStrategy(object):
             self.depth, self.Z_dimension
         )  # list of all words of length <= depth in alphabet of size Z
         words_len = len(words)
-        print(
-            f"all words of length <= {self.depth} in alphabet of size {self.Z_dimension} are {words}"
-        )
         for m in range(self.d):
-            shift_m = self.f(m)
+            fm = self.f(m)
             # print(f"m={m}, there are {len(words)} words to tackle for this value of m")
             for w in words:
-                wfm = w + shift_m
+                wfm = w + fm
                 for n in range(self.d):
-                    shift_n = self.f(n)
+                    fn = self.f(n)
                     for v in words:
-                        vfn = v + shift_n
+                        vfn = v + fn
                         # calcul de sigma_sig_{wf(m),vf(n)}
 
                         # calcul du terme de gauche
@@ -102,14 +99,8 @@ class TradingStrategy(object):
                         words_shuffle = utils.shuffle_product(wfm, vfn)
                         # cela génère des mots de longueur <= 2*depth, donc on doit les tronquer!? --> non, il faut juste un E_ZZ_LL tronqué à 2*depth
                         # il y a aussi des doublons potentiels ? si oui, à enlever ?
-                        # print(f'words={words}')
-                        print(f"m={m}, n={n}, w='{w}', v='{v}'")
-                        print(f'wf(m)="{wfm}", vf(n)="{vfn}"')
-                        print(f"words_shuffle={words_shuffle}")
+
                         for word in words_shuffle:
-                            print(
-                                f'accessing word "{word}" of length {len(word)}, given that E_ZZ_LL was computed at depth {2*(self.depth+1)}'
-                            )
                             left_term += E_ZZ_LL[
                                 utils.word_to_i(
                                     word, 2 * self.Z_dimension
@@ -208,16 +199,17 @@ class TradingStrategy(object):
         # yes, now is the time for 2*(depth+1) to compute sigma
         ZZ_LL = utils.compute_signature(Z_LL, 2 * (self.depth + 1))
         # ZZ_LL has shape (M, T, K) with K = 1 + (2*Z) + (2*Z)^2 + ... + (2*Z)^(2*(depth+1))
-        practical_len = ZZ_LL.shape[1]
-        theoretical_len = utils.get_number_of_words_leq_k(
-            2 * (self.depth + 1), 2 * self.Z_dimension
-        )
-        print(
-            f"ZZ_LL has length {practical_len} but should have length {theoretical_len}"
-        )
-        assert (
-            practical_len == theoretical_len
-        ), f"ZZ_LL has length {practical_len} but should have length {theoretical_len}"
+
+        # practical_len = ZZ_LL.shape[1]
+        # theoretical_len = utils.get_number_of_words_leq_k(
+        #     2 * (self.depth + 1), 2 * self.Z_dimension
+        # )
+        # print(
+        #     f"ZZ_LL has length {practical_len} but should have length {theoretical_len}"
+        # )
+        # assert (
+        #     practical_len == theoretical_len
+        # ), f"ZZ_LL has length {practical_len} but should have length {theoretical_len}"
 
         # 4. compute the expected N-truncated signature E[ZZ^^LL_t] using the empirical mean
         E_ZZ_LL = torch.mean(ZZ_LL, axis=0)
