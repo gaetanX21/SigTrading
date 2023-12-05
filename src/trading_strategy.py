@@ -34,7 +34,7 @@ class TradingStrategy(object):
         return str(self.Z_dimension + m + 1)  # or self.Z_dimension + m (old version) ?
 
     @timeit
-    def compute_mu_sig(self, E_ZZ_LL: torch.Tensor) -> torch.Tensor:
+    def compute_mu_sig(self, E_ZZ_LL: torch.Tensor) -> None:
         """
         This method computes the mu_sig vector as defined in the paper.
         E_ZZ_LL needs to be computed to truncated level >=self.depth+1. (see (*))
@@ -67,10 +67,9 @@ class TradingStrategy(object):
         # pct = (mu_sig != 0).sum() / len(mu_sig)
         # print(f"Percentage of non-zero elements in mu_sig: {pct}")
         self.mu_sig = mu_sig
-        return mu_sig
 
     @timeit
-    def compute_sigma_sig(self, E_ZZ_LL: torch.Tensor) -> torch.Tensor:
+    def compute_sigma_sig(self, E_ZZ_LL: torch.Tensor) -> None:
         """
         This method computes the mu_sig matrix as defined in the paper.
         """
@@ -132,7 +131,6 @@ class TradingStrategy(object):
 
         print("\033[92m" + "sigma_sig successfully computed" + "\033[0m")
         self.sigma_sig = sigma_sig
-        return sigma_sig
 
     def compute_functionals(self) -> torch.Tensor:
         """
@@ -204,14 +202,15 @@ class TradingStrategy(object):
 
         # 4. compute the expected N-truncated signature E[ZZ^^LL_t] using the empirical mean
         E_ZZ_LL = torch.mean(ZZ_LL, axis=0)
+        self.E_ZZ_LL = E_ZZ_LL  # for debugging purposes
         # E_ZZ_LL has shape (T, K)
 
         # 5. compute the mu_sig vector as defined in the paper
-        mu_sig = self.compute_mu_sig(E_ZZ_LL)
+        self.compute_mu_sig(E_ZZ_LL)
         # mu_sig has shape (d, mu_i_length) with mu_i_length = 1 + Z + Z^2 + ... + Z^depth
 
         # 6. compute the sigma_sig matrix as defined in the paper
-        sigma_sig = self.compute_sigma_sig(E_ZZ_LL)
+        self.compute_sigma_sig(E_ZZ_LL)
 
         # 7. compute lambda the variance-scaling parameter
         self.compute_lambda()
