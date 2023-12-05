@@ -90,7 +90,11 @@ def compute_lead_lag_transform(batch_path: torch.Tensor) -> torch.Tensor:
 def compute_signature(
     batch_path: torch.Tensor, depth: int, no_batch: bool = False
 ) -> torch.Tensor:
-    """ """
+    if depth == 0:
+        if no_batch:
+            return torch.ones(1)
+        else:
+            return torch.ones(batch_path.shape[0], 1)
     if no_batch:
         sig = signatory.signature(
             batch_path.unsqueeze(0), depth, scalar_term=True

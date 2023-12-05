@@ -83,6 +83,9 @@ class TradingStrategy(object):
             self.depth, self.Z_dimension
         )  # list of all words of length <= depth in alphabet of size Z
         words_len = len(words)
+        print(
+            f"all words of length <= {self.depth} in alphabet of size {self.Z_dimension} are {words}"
+        )
         for m in range(self.d):
             shift_m = self.f(m)
             # print(f"m={m}, there are {len(words)} words to tackle for this value of m")
@@ -100,7 +103,13 @@ class TradingStrategy(object):
                         # cela génère des mots de longueur <= 2*depth, donc on doit les tronquer!? --> non, il faut juste un E_ZZ_LL tronqué à 2*depth
                         # il y a aussi des doublons potentiels ? si oui, à enlever ?
                         # print(f'words={words}')
+                        print(f"m={m}, n={n}, w='{w}', v='{v}'")
+                        print(f'wf(m)="{wfm}", vf(n)="{vfn}"')
+                        print(f"words_shuffle={words_shuffle}")
                         for word in words_shuffle:
+                            print(
+                                f'accessing word "{word}" of length {len(word)}, given that E_ZZ_LL was computed at depth {2*(self.depth+1)}'
+                            )
                             left_term += E_ZZ_LL[
                                 utils.word_to_i(
                                     word, 2 * self.Z_dimension
@@ -198,7 +207,17 @@ class TradingStrategy(object):
         # ZZ_LL = utils.compute_signature(Z_LL, self.depth+1) # we'll need 2*(depth+1) to compute sigma later on
         # yes, now is the time for 2*(depth+1) to compute sigma
         ZZ_LL = utils.compute_signature(Z_LL, 2 * (self.depth + 1))
-        # ZZ_LL has shape (M, T, K) with K = 1 + (2*Z) + (2*Z)^2 + ... + (2*Z)^(depth+1)
+        # ZZ_LL has shape (M, T, K) with K = 1 + (2*Z) + (2*Z)^2 + ... + (2*Z)^(2*(depth+1))
+        practical_len = ZZ_LL.shape[1]
+        theoretical_len = utils.get_number_of_words_leq_k(
+            2 * (self.depth + 1), 2 * self.Z_dimension
+        )
+        print(
+            f"ZZ_LL has length {practical_len} but should have length {theoretical_len}"
+        )
+        assert (
+            practical_len == theoretical_len
+        ), f"ZZ_LL has length {practical_len} but should have length {theoretical_len}"
 
         # 4. compute the expected N-truncated signature E[ZZ^^LL_t] using the empirical mean
         E_ZZ_LL = torch.mean(ZZ_LL, axis=0)
@@ -333,3 +352,8 @@ class TradingStrategy(object):
         )  # daily_pnl has shape (T-1, d) and it's the pnl for each asset for each "trading day" (ie. each time step)
 
         return daily_pnl
+
+    def print_functionals(self) -> None:
+        for i, func in enumerate(self.functionals):
+            print("\033[91m" + "L_" + str(i + 1) + "\033[0m")
+            utils.print_signature(func.flatten(), self.Z_dimension, self.depth)
