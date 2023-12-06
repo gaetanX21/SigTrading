@@ -46,7 +46,9 @@ def get_length_k_words(k: int, channels: int) -> np.ndarray:
     Recall that a word is a list of integers. (with integer i representing (i-1)-th letter of the alphabet)
     """
     alphabet = list(range(channels))
-    return list(itertools.product(alphabet, repeat=k))
+    return list(
+        list(tup) for tup in itertools.product(alphabet, repeat=k)
+    )  # we want lists, not tuples, for indexing, otherwise we cannot concatenate them easily afterwards
 
 
 def get_length_leq_k_words(k: int, channels: int) -> np.ndarray:
@@ -58,7 +60,9 @@ def get_length_leq_k_words(k: int, channels: int) -> np.ndarray:
     for i in range(k + 1):
         words_length_i = get_length_k_words(i, channels)
         words.append(words_length_i)
-    return np.concatenate(words).tolist()
+    # put all words in a single list
+    words_single_list = [word for sublist in words for word in sublist]
+    return words_single_list
 
 
 def get_number_of_words_k(k: int, channels: int) -> int:
@@ -130,10 +134,10 @@ def shuffle_product(word1, word2):
         v, b = word2[:-1], word2[-1]
 
         shuffle_left = shuffle_product(u, word2)  # (u ⧢ vb)
-        left_term = [word + a for word in shuffle_left]  # (u ⧢ vb)a
+        left_term = [word + [a] for word in shuffle_left]  # (u ⧢ vb)a
 
         shuffle_right = shuffle_product(word1, v)  # (ua ⧢ v)
-        right_term = [word + b for word in shuffle_right]
+        right_term = [word + [b] for word in shuffle_right]
 
         return left_term + right_term  # union of the two
 
