@@ -1,6 +1,6 @@
 # SigTrading
 
-Implementing state-of-the-art Signature Trading method, as proposed in _Signature Trading: A Path-Dependent Extension of the Mean-Variance Framework with Exogenous Signals_. (Futter, Owen &amp; Horvath, Blanka &amp; Wiese, Magnus, 2023).
+Implementing state-of-the-art <b>Signature Trading method</b>, as proposed in _Signature Trading: A Path-Dependent Extension of the Mean-Variance Framework with Exogenous Signals_. (Futter, Owen &amp; Horvath, Blanka &amp; Wiese, Magnus, 2023).
 
 **/src** folder contains
 
@@ -12,4 +12,4 @@ Implementing state-of-the-art Signature Trading method, as proposed in _Signatur
 
 The Sig Trader uses <code>signatory</code> to compute signatures, itself using <code>torch</code> as backend. However, most triplet versions <code>python/torch/signatory</code> are <b>not</b> compatible.
 
-We have found that Python 3.8.0, <code>torch==1.7.1</code> and <code>signatory==1.2.4.1.7.1</code> works for our implementation.
+We have found that <code>Python 3.8.0</code>, <code>torch==1.7.1</code> and <code>signatory==1.2.4.1.7.1</code> works for our implementation.
