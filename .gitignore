@@ -1,2 +1,2 @@
-.venv
-
+# ignore all . files and . folders
+.*
