@@ -1,1 +1,0 @@
-- est-ce legit de prendre range(len(series)) pour le temps t ?

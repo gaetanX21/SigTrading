@@ -11,6 +11,10 @@ sns.set_theme()
 
 
 def timeit(func):
+    """
+    Decorator to time a function, displaying the time it took to run it iff it took more than 1 second.
+    """
+
     def timed(*args, **kwargs):
         start = time.time()
         output = func(*args, **kwargs)
@@ -31,6 +35,9 @@ def word_to_i(word: List[int], d: int) -> int:
     """
     Given a word written in the alphabet {0, 1, ..., d-1}, return its index in the lexicographic order (basically).
     Recall that word is a list of integers. (with integer i representing (i-1)-th letter of the alphabet)
+
+    The purpose of this utility function is to go from word indices (as defined in the paper) to integer indices
+    (as defined by our implementation), which is useful for indexing signature objects since we represent them as flat tensors.
     """
     k = len(word)  # we're accessing the k-th signature term
     s = sum(d**i for i in range(k))  # 1 + d + d^2 + ... + d^(k-1)
@@ -81,7 +88,9 @@ def get_number_of_words_leq_k(k: int, channels: int) -> int:
 
 @timeit
 def compute_lead_lag_transform(batch_path: torch.Tensor) -> torch.Tensor:
-    """ " """
+    """
+    Computes the lead-lag transform of a batch of paths.
+    """
     batch_path_doubled = batch_path.repeat_interleave(
         2, dim=1
     )  # each path is doubled (with neighbors equal)
@@ -97,6 +106,9 @@ def compute_lead_lag_transform(batch_path: torch.Tensor) -> torch.Tensor:
 def compute_signature(
     batch_path: torch.Tensor, depth: int, no_batch: bool = False
 ) -> torch.Tensor:
+    """
+    Computes the signature of a batch of paths, using signatory.
+    """
     if depth == 0:
         if no_batch:
             return torch.ones(1)
@@ -115,7 +127,6 @@ def compute_signature(
 def shuffle_product(word1, word2):
     """
     Given two words, return the shuffle product of the two.
-    TESTED, WORKS.
     """
     if len(word1) == 0:
         return word2
@@ -143,6 +154,9 @@ def shuffle_product(word1, word2):
 
 
 def plot_cum_pnl(cum_pnl: torch.tensor) -> None:
+    """
+    Plots the cumulative PnL of a trading strategy.
+    """
     plt.figure(figsize=(10, 5))
     n_assets = cum_pnl.shape[1]
     T = cum_pnl.shape[0]  # number of time steps
@@ -161,7 +175,9 @@ def plot_cum_pnl(cum_pnl: torch.tensor) -> None:
 
 
 def print_signature(flat: torch.tensor, channels: int, depth: int) -> None:
-    """Receives a {depth}-truncated signature of a signal with {channels} dimension and prints it in a nice way."""
+    """
+    Receives a {depth}-truncated signature of a signal with {channels} dimension and prints it in a pretty way.
+    """
     N = flat.shape[0]
     s = 0
     for k in range(depth + 1):
