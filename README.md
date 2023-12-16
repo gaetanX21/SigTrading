@@ -3,6 +3,7 @@
 Implementing state-of-the-art <b>Signature Trading method</b>, as proposed in _Signature Trading: A Path-Dependent Extension of the Mean-Variance Framework with Exogenous Signals_. (Futter, Owen &amp; Horvath, Blanka &amp; Wiese, Magnus, 2023).
 
 The **/src** folder contains
+
 - <code>trading_strategy.py</code> class, which is the core implementation of the Sig Trader
 - <code>utils.py</code> file used for <code>trading_strategy</code>
 - 4 Jupyter notebooks each illustrating the performance of the Sig Trader in different contexts
