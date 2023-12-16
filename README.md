@@ -8,7 +8,7 @@ The **/src** folder contains
 - <code>utils.py</code> file used for <code>trading_strategy</code>
 - 4 Jupyter notebooks each illustrating the performance of the Sig Trader in different contexts
 
-In addition,**original_paper.pdf** contains the original paper while **report.pdf** contains the project report.
+In addition, <code>original_paper.pdf</code> contains the original paper while <code>report.pdf</code> contains the project report.
 
 <h2 style="color:red">Important</h2>
 
